@@ -16,7 +16,7 @@
 <body>
 
     <div class="widget-box" id="clanWidget">
-        <div class="title">Противник: <span id="clanTag" class="clan-tag">Ожидание...</span></div>
+        <div class="title">Противник: <span id="clanTag" class="clan-tag">Загрузка теста...</span></div>
         <div class="stat-row">ЭЛО (6 ур): <span id="elo6" class="value">-</span></div>
         <div class="stat-row">ЭЛО (8 ур): <span id="elo8" class="value">-</span></div>
         <div class="stat-row">ЭЛО (10 ур): <span id="elo10" class="value">-</span></div>
@@ -24,8 +24,49 @@
         <div class="stat-row">Боёв за 28 дней: <span id="battles28" class="value highlight">-</span></div>
     </div>
 
-    <!-- ИСПРАВЛЕНО: Ссылка теперь ведет на реальный рабочий файл библиотеки -->
-    <script src="https://unpkg.com"></script>
-    <script src="index.js" defer></script> 
+    <script>
+        // Всё находится внутри одного файла, никаких внешних скриптов!
+        const APP_ID = 'd565e587cfabd2567bce65b682753ea5'; 
+        const API_URL = 'https://api.worldoftanks.eu';  
+
+        // Тестируем строго живой активный EU-клан INVIL
+        const TEST_CLAN_ID = '500143169'; 
+        const TEST_CLAN_TAG = 'INVIL';
+
+        // Запуск проверки связи через 1 секунду после старта виджета
+        setTimeout(() => {
+            document.getElementById('clanTag').innerText = `[${TEST_CLAN_TAG}] (ТЕСТ)`;
+            fetchClanStrongholdData(TEST_CLAN_ID);
+        }, 1000);
+
+        async function fetchClanStrongholdData(clanId) {
+            try {
+                const response = await fetch(`${API_URL}/wot/stronghold/claninfo/?application_id=${APP_ID}&clan_id=${clanId}`);
+                const json = await response.json();
+
+                if (json.status === 'ok' && json.data[clanId]) {
+                    const clanData = json.data[clanId];
+
+                    document.getElementById('elo6').innerText = clanData.skirmish_6_elo_rating || 'Нет';
+                    document.getElementById('elo8').innerText = clanData.skirmish_8_elo_rating || 'Нет';
+                    document.getElementById('elo10').innerText = clanData.skirmish_10_elo_rating || 'Нет';
+
+                    const battles6 = clanData.skirmish_6_battles_28 || 0;
+                    const battles8 = clanData.skirmish_8_battles_28 || 0;
+                    const battles10 = clanData.skirmish_10_battles_28 || 0;
+                    document.getElementById('battles28').innerText = battles6 + battles8 + battles10;
+                } else {
+                    if (json.error) {
+                        document.getElementById('battles28').innerText = "Ошибка: " + json.error.message;
+                    } else {
+                        document.getElementById('battles28').innerText = 'Клан не найден';
+                    }
+                }
+            } catch (error) {
+                // Если это реальный сбой сети из-за file://, мы выведем техническое сообщение
+                document.getElementById('battles28').innerText = 'Блокировка CORS/Сети';
+            }
+        }
+    </script>
 </body>
 </html>
