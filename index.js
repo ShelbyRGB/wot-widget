@@ -1,27 +1,22 @@
-// Тестовый запуск без участия мода игры
 const APP_ID = 'd565e587cfabd2567bce65b682753ea5'; 
-const API_URL = 'https://worldoftanks.eu';  
+// ИСПРАВЛЕНО: Добавлен обязательный поддомен api.
+const API_URL = 'https://api.worldoftanks.eu';  
 
-// ВРУЧНУЮ ПОДСТАВЛЯЕМ ДАННЫЕ ДЛЯ ПРОВЕРКИ
-// Мы имитируем, будто нашли клан FAME на EU-сервере
-const TEST_CLAN_ID = '500000030'; 
-const TEST_CLAN_TAG = 'FIST';
+// Тестируем на живом EU клане INVIL (у FIST или FAME может быть скрыта статистика)
+const TEST_CLAN_ID = '500143169'; 
+const TEST_CLAN_TAG = 'INVIL';
 
-// Функция запускается автоматически через 1 секунду после открытия виджета
 setTimeout(() => {
     document.getElementById('clanTag').innerText = `[${TEST_CLAN_TAG}] (ТЕСТ)`;
     fetchClanStrongholdData(TEST_CLAN_ID);
 }, 1000);
 
-
-// НАША ФУНКЦИЯ ЗАПРОСА К API (БЕЗ ИЗМЕНЕНИЙ)
 async function fetchClanStrongholdData(clanId) {
     try {
         const response = await fetch(`${API_URL}/wot/stronghold/claninfo/?application_id=${APP_ID}&clan_id=${clanId}`);
         const json = await response.json();
 
-        // Отладочный вывод ответа сервера в консоль
-        console.log("Ответ от API Wargaming:", json);
+        console.log("Ответ от API:", json);
 
         if (json.status === 'ok' && json.data[clanId]) {
             const clanData = json.data[clanId];
@@ -40,7 +35,11 @@ async function fetchClanStrongholdData(clanId) {
             document.getElementById('elo10').innerText = elo10;
             document.getElementById('battles28').innerText = total28DaysBattles;
         } else {
-            clearWidgetFields('Клан не играет в укрепах или ошибка');
+            if (json.error) {
+                clearWidgetFields("Ошибка: " + json.error.message);
+            } else {
+                clearWidgetFields('Клан не найден');
+            }
         }
     } catch (error) {
         clearWidgetFields('Ошибка сети API');

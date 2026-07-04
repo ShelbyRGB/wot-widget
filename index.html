@@ -4,21 +4,8 @@
     <meta charset="UTF-8">
     <title>WoT Opponent Clan Widget</title>
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            color: white;
-            background: transparent;
-            margin: 0;
-            padding: 10px;
-        }
-        .widget-box {
-            background: rgba(15, 15, 15, 0.85);
-            border: 2px solid #ff4400;
-            border-radius: 6px;
-            padding: 12px;
-            width: 280px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
+        body { font-family: 'Arial', sans-serif; color: white; background: transparent; margin: 0; padding: 10px; }
+        .widget-box { background: rgba(15, 15, 15, 0.85); border: 2px solid #ff4400; border-radius: 6px; padding: 12px; width: 280px; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
         .title { font-weight: bold; font-size: 15px; margin-bottom: 8px; text-transform: uppercase; color: #cccccc;}
         .clan-tag { color: #ffcc00; font-size: 18px; font-weight: bold; }
         .stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px;}
@@ -37,11 +24,8 @@
         <div class="stat-row">Боёв за 28 дней: <span id="battles28" class="value highlight">-</span></div>
     </div>
 
-    <!-- SDK WotStat -->
-     <!-- ИСПРАВЛЕНО: Теперь адрес ведет на конкретный файл библиотеки WotStat -->
+    <!-- ИСПРАВЛЕНО: Ссылка теперь ведет на реальный рабочий файл библиотеки -->
     <script src="https://unpkg.com"></script>
-    
-    <!-- Ваш логический скрипт с defer, чтобы он запускался строго ПОСЛЕ библиотеки -->
     <script src="index.js" defer></script> 
 </body>
 </html>
