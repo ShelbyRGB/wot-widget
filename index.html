@@ -16,7 +16,7 @@
 <body>
 
     <div class="widget-box" id="clanWidget">
-        <div class="title">Противник: <span id="clanTag" class="clan-tag">Загрузка теста...</span></div>
+        <div class="title">Противник: <span id="clanTag" class="clan-tag">Поиск боя...</span></div>
         <div class="stat-row">ЭЛО (6 ур): <span id="elo6" class="value">-</span></div>
         <div class="stat-row">ЭЛО (8 ур): <span id="elo8" class="value">-</span></div>
         <div class="stat-row">ЭЛО (10 ур): <span id="elo10" class="value">-</span></div>
@@ -24,21 +24,80 @@
         <div class="stat-row">Боёв за 28 дней: <span id="battles28" class="value highlight">-</span></div>
     </div>
 
+    <!-- Подключаем библиотеку WotStat прямо сюда -->
+    <script src="https://unpkg.com"></script>
+
     <script>
-        // Всё находится внутри одного файла, никаких внешних скриптов!
+        const wotState = new WotStatWidget();
         const APP_ID = 'd565e587cfabd2567bce65b682753ea5'; 
         const API_URL = 'https://api.worldoftanks.eu';  
 
-        // Тестируем строго живой активный EU-клан INVIL
-        const TEST_CLAN_ID = '500143169'; 
-        const TEST_CLAN_TAG = 'INVIL';
+        let currentProcessedClanId = null;
 
-        // Запуск проверки связи через 1 секунду после старта виджета
-        setTimeout(() => {
-            document.getElementById('clanTag').innerText = `[${TEST_CLAN_TAG}] (ТЕСТ)`;
-            fetchClanStrongholdData(TEST_CLAN_ID);
-        }, 1000);
+        // 1. АВТОМАТИЧЕСКИЙ ОПРОС ИГРЫ КАЖДЫЕ 3 СЕКУНДЫ
+        function forceCheckGameStatus() {
+            try {
+                const state = wotState.getState();
+                
+                if (state && state.arena && state.arena.opponents && state.arena.opponents.length > 0) {
+                    // Ищем первого игрока, у которого мод заполнил данные клана
+                    const realOpponent = state.arena.opponents.find(p => p && (p.clanId || p.clanID || p.clanTag));
 
+                    if (realOpponent) {
+                        const enemyClanId = realOpponent.clanId || realOpponent.clanID;
+                        const enemyClanTag = realOpponent.clanTag;
+
+                        // Если мод дал числовой ID — сразу запрашиваем укрепы
+                        if (enemyClanId && enemyClanId !== currentProcessedClanId) {
+                            currentProcessedClanId = enemyClanId;
+                            document.getElementById('clanTag').innerText = `[${enemyClanTag}]`;
+                            fetchClanStrongholdData(enemyClanId);
+                        } 
+                        // Если мод дал ТОЛЬКО текстовый тег — сначала ищем его ID через API по названию
+                        else if (enemyClanTag && enemyClanTag !== currentProcessedClanId) {
+                            currentProcessedClanId = enemyClanTag; 
+                            document.getElementById('clanTag').innerText = `[${enemyClanTag}]...`;
+                            searchClanIdByTag(enemyClanTag);
+                        }
+                    }
+                } else {
+                    // Если мы не в бою, аккуратно пишем статус ожидания
+                    if (!currentProcessedClanId) {
+                        document.getElementById('clanTag').innerText = 'Поиск боя...';
+                        clearWidgetFields('Ожидание загрузки карты');
+                    }
+                }
+            } catch (err) {
+                console.error("Ошибка опроса мода:", err);
+            }
+        }
+
+        // Запуск непрерывного таймера
+        setInterval(forceCheckGameStatus, 3000);
+
+        // 2. ФУНКЦИЯ ПОИСКА ID КЛАНА ПО ЕГО ТЕГСТОВОМУ ТЕГУ
+        async function searchClanIdByTag(clanTag) {
+            try {
+                const response = await fetch(`${API_URL}/wot/clans/list/?application_id=${APP_ID}&search=${clanTag}`);
+                const json = await response.json();
+
+                if (json.status === 'ok' && json.data && json.data.length > 0) {
+                    // Ищем точное совпадение тега среди результатов поиска
+                    const exactClan = json.data.find(c => c.tag.toUpperCase() === clanTag.toUpperCase());
+                    if (exactClan) {
+                        fetchClanStrongholdData(exactClan.clan_id);
+                    } else {
+                        clearWidgetFields('Тег не совпал');
+                    }
+                } else {
+                    clearWidgetFields('Клан по тегу не найден');
+                }
+            } catch (e) {
+                clearWidgetFields('Ошибка поиска тега');
+            }
+        }
+
+        // 3. ФУНКЦИЯ ПОЛУЧЕНИЯ ЭЛО И БОЕВ ПО ID КЛАНА
         async function fetchClanStrongholdData(clanId) {
             try {
                 const response = await fetch(`${API_URL}/wot/stronghold/claninfo/?application_id=${APP_ID}&clan_id=${clanId}`);
@@ -56,16 +115,18 @@
                     const battles10 = clanData.skirmish_10_battles_28 || 0;
                     document.getElementById('battles28').innerText = battles6 + battles8 + battles10;
                 } else {
-                    if (json.error) {
-                        document.getElementById('battles28').innerText = "Ошибка: " + json.error.message;
-                    } else {
-                        document.getElementById('battles28').innerText = 'Клан не найден';
-                    }
+                    clearWidgetFields('Нет данных в укрепах');
                 }
             } catch (error) {
-                // Если это реальный сбой сети из-за file://, мы выведем техническое сообщение
-                document.getElementById('battles28').innerText = 'Блокировка CORS/Сети';
+                clearWidgetFields('Ошибка сети API');
             }
+        }
+
+        function clearWidgetFields(message) {
+            document.getElementById('elo6').innerText = '-';
+            document.getElementById('elo8').innerText = '-';
+            document.getElementById('elo10').innerText = '-';
+            document.getElementById('battles28').innerText = message;
         }
     </script>
 </body>
